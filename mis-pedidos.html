@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARIACHI HACKS | Mis Pedidos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+  <script src="js/supabase.js"></script>
+  <script src="js/neon-effects.js"></script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(8,8,14,0.78); border: 1px solid rgba(0,255,102,0.13); backdrop-filter: blur(14px); }
+    .btn-primary { background: linear-gradient(135deg,#00ff66,#00bc4c); color:#000; font-weight:800; transition:all .25s; }
+    .btn-primary:hover { background: linear-gradient(135deg,#00ff66,#ff003c); color:#fff; transform:translateY(-1px); }
+    input { background: rgba(8,8,14,0.9) !important; border: 1px solid rgba(0,255,102,0.15) !important; color:#f1f5f9 !important; }
+    input:focus { border-color:rgba(0,255,102,0.5) !important; box-shadow:0 0 0 3px rgba(0,255,102,0.08) !important; outline:none; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .animate-in { animation: fadeInUp 0.35s ease both; }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+<div class="max-w-3xl mx-auto">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between glass-card p-4 rounded-2xl mb-6 animate-in">
+    <button onclick="location.href='index.html'" class="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-emerald-400 transition">
+      <span class="material-symbols-outlined text-sm">arrow_back</span> Catálogo
+    </button>
+    <h1 class="text-sm font-black text-white uppercase tracking-widest" style="font-family:'Syne',sans-serif">Mis Pedidos</h1>
+    <div class="w-16"></div>
+  </header>
+
+  <!-- Lookup form -->
+  <div id="lookupSection" class="glass-card p-7 rounded-2xl mb-6 animate-in" style="animation-delay:.05s">
+    <div class="text-center mb-5">
+      <span class="material-symbols-outlined text-3xl text-emerald-400 mb-2 block">manage_search</span>
+      <h2 class="text-base font-black text-white" style="font-family:'Syne',sans-serif">Buscar mis Pedidos</h2>
+      <p class="text-xs text-zinc-500 mt-1">Ingresa tu usuario o contacto para ver tus órdenes</p>
+    </div>
+    <div class="flex gap-3">
+      <input type="text" id="lookupInput" placeholder="@usuario, nombre o número..." class="flex-1 rounded-xl px-4 py-3 text-sm" onkeydown="if(event.key==='Enter')searchOrders()">
+      <button onclick="searchOrders()" class="btn-primary px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm">search</span> Buscar
+      </button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsSection" class="flex flex-col gap-3"></div>
+
+</div>
+
+<script>
+  async function searchOrders() {
+    const q = document.getElementById('lookupInput').value.trim();
+    if (!q) return;
+
+    const btn = document.querySelector('[onclick="searchOrders()"]');
+    btn.textContent = 'Buscando...';
+    btn.disabled = true;
+
+    const { data: orders, error } = await window.m7Supabase
+      .from('orders')
+      .select('*')
+      .or(`client_name.ilike.%${q}%,client_contact.ilike.%${q}%`)
+      .order('id', { ascending: false });
+
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm">search</span> Buscar';
+    btn.disabled = false;
+
+    const section = document.getElementById('resultsSection');
+
+    if (error || !orders || !orders.length) {
+      section.innerHTML = `
+        <div class="glass-card p-10 rounded-2xl text-center animate-in">
+          <span class="material-symbols-outlined text-4xl text-zinc-700 mb-2 block">search_off</span>
+          <p class="text-zinc-400 text-sm font-semibold">No se encontraron pedidos</p>
+          <p class="text-zinc-600 text-xs mt-1">Verifica tu nombre de usuario o contacto.</p>
+        </div>`;
+      return;
+    }
+
+    section.innerHTML = `
+      <p class="text-xs text-zinc-500 px-1 mb-1">${orders.length} ${orders.length === 1 ? 'pedido encontrado' : 'pedidos encontrados'}</p>
+      ${orders.map((o, i) => {
+        const items = o.products_list.map(p => `${p.name} ×${p.quantity}`).join(', ');
+        const isPending = o.status === 'Pendiente';
+        return `
+          <div class="glass-card p-5 rounded-2xl animate-in" style="animation-delay:${i*0.06}s">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-[10px] font-mono text-zinc-600">#${o.id}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${isPending ? 'bg-amber-950/60 text-amber-400 border border-amber-900/50' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'}">
+                    ${isPending ? '⏳ ' : '✅ '}${o.status}
+                  </span>
+                </div>
+                <p class="text-xs text-zinc-400 leading-relaxed line-clamp-3">${items}</p>
+              </div>
+              <div class="text-right shrink-0">
+                <p class="text-lg font-black font-mono text-emerald-400" style="font-family:'Syne',sans-serif">$${parseFloat(o.total_price).toFixed(2)}</p>
+                ${isPending ? `<p class="text-[10px] text-zinc-500 mt-1">En proceso...</p>` : `<p class="text-[10px] text-emerald-600 mt-1">Completado ✓</p>`}
+              </div>
+            </div>
+            ${isPending ? `
+              <div class="mt-3 pt-3 border-t border-zinc-900/60">
+                <p class="text-[11px] text-zinc-500">Tu pedido está siendo procesado. Serás contactado pronto en <span class="text-zinc-300 font-semibold">${o.client_contact}</span>.</p>
+              </div>` : ''}
+          </div>`;
+      }).join('')}`;
+  }
+</script>
+</body>
+</html>

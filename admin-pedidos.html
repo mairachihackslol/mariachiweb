@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARIACHI HACKS | Órdenes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+  <script src="js/supabase.js"></script>
+  <script src="js/neon-effects.js"></script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(8,8,14,0.78); border: 1px solid rgba(0,255,102,0.13); backdrop-filter: blur(14px); }
+    .btn-primary { background: linear-gradient(135deg,#00ff66,#00bc4c); color:#000; font-weight:800; transition:all .25s; }
+    .btn-primary:hover { background: linear-gradient(135deg,#00ff66,#ff003c); color:#fff; transform:translateY(-1px); box-shadow:0 0 25px rgba(0,255,102,0.3); }
+    select { background: rgba(8,8,14,0.9) !important; border: 1px solid rgba(0,255,102,0.15) !important; color:#f1f5f9 !important; }
+    select:focus { outline:none; border-color:rgba(0,255,102,0.4) !important; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .order-card { animation: fadeInUp 0.3s ease both; transition: border-color 0.2s; }
+    .order-card:hover { border-color: rgba(0,255,102,0.25) !important; }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+<div class="max-w-6xl mx-auto">
+  <header class="flex flex-wrap items-center gap-3 glass-card p-4 rounded-2xl mb-6">
+    <button onclick="location.href='dashboard.html'" class="text-xs font-bold text-zinc-400 hover:text-emerald-400 transition flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">arrow_back</span> Dashboard
+    </button>
+    <h1 class="text-sm font-black text-white tracking-widest uppercase flex-1" style="font-family:'Syne',sans-serif">Panel de Pedidos</h1>
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Filtrar:</span>
+      <select id="statusFilter" class="rounded-xl px-3 py-1.5 text-xs font-bold">
+        <option value="Todos">Todos</option>
+        <option value="Pendiente">Pendientes</option>
+        <option value="Entregado">Entregados</option>
+      </select>
+    </div>
+    <div class="glass-card px-3 py-1.5 rounded-xl">
+      <span class="text-xs font-mono text-zinc-400" id="orderCount">— órdenes</span>
+    </div>
+  </header>
+
+  <div id="ordersContainer" class="flex flex-col gap-3">
+    <div class="glass-card p-10 rounded-2xl text-center text-zinc-500 text-xs">
+      <div class="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+      Cargando pedidos...
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadOrders() {
+    const filter = document.getElementById('statusFilter').value;
+    let query = window.m7Supabase.from('orders').select('*').order('id', { ascending: false });
+    if (filter !== 'Todos') query = query.eq('status', filter);
+    const { data: orders, error } = await query;
+
+    const container = document.getElementById('ordersContainer');
+    if (error || !orders || !orders.length) {
+      container.innerHTML = `
+        <div class="glass-card p-12 rounded-2xl text-center">
+          <span class="material-symbols-outlined text-4xl text-zinc-700 mb-2 block">inbox</span>
+          <p class="text-zinc-500 text-sm">No hay pedidos ${filter !== 'Todos' ? 'con estado "'+filter+'"' : 'registrados'}.</p>
+        </div>`;
+      document.getElementById('orderCount').textContent = '0 órdenes';
+      return;
+    }
+
+    document.getElementById('orderCount').textContent = `${orders.length} ${orders.length === 1 ? 'orden' : 'órdenes'}`;
+
+    container.innerHTML = orders.map((o, i) => {
+      const items = o.products_list.map(p => `${p.name} ×${p.quantity}`).join(' · ');
+      const isPending = o.status === 'Pendiente';
+      return `
+        <div class="glass-card order-card p-5 rounded-2xl" style="animation-delay:${i*0.05}s">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-[10px] font-mono text-zinc-600">#${o.id}</span>
+                <span class="text-xs font-black text-white" style="font-family:'Syne',sans-serif">${o.client_name}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${isPending ? 'bg-amber-950/60 text-amber-400 border border-amber-900/50' : 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'}">${o.status}</span>
+              </div>
+              <div class="flex items-center gap-4 text-xs text-zinc-400 mb-2">
+                <span class="flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs text-zinc-600">contact_phone</span>
+                  ${o.client_contact}
+                </span>
+              </div>
+              <p class="text-[11px] text-zinc-500 leading-relaxed line-clamp-2">${items}</p>
+            </div>
+            <div class="flex items-center gap-3 sm:flex-col sm:items-end shrink-0">
+              <span class="text-lg font-black font-mono text-emerald-400" style="font-family:'Syne',sans-serif">$${parseFloat(o.total_price).toFixed(2)}</span>
+              <div class="flex gap-2">
+                ${isPending ? `<button onclick="updateStatus(${o.id},'Entregado')" class="btn-primary px-3 py-1.5 rounded-lg text-[11px] font-bold flex items-center gap-1">
+                  <span class="material-symbols-outlined text-xs">check_circle</span> Entregado
+                </button>` : `<button onclick="updateStatus(${o.id},'Pendiente')" class="text-[11px] text-zinc-500 hover:text-amber-400 border border-zinc-800 px-3 py-1.5 rounded-lg transition font-bold">Reabrir</button>`}
+                <button onclick="deleteOrder(${o.id})" class="text-zinc-600 hover:text-red-400 transition border border-zinc-800 p-1.5 rounded-lg flex items-center">
+                  <span class="material-symbols-outlined text-sm">delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function updateStatus(id, status) {
+    await window.m7Supabase.from('orders').update({ status }).eq('id', id);
+    if (window.m7Toast) m7Toast(status === 'Entregado' ? '✅ Marcado como Entregado' : '🔄 Reabierto como Pendiente');
+    loadOrders();
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('¿Eliminar permanentemente este pedido?')) return;
+    await window.m7Supabase.from('orders').delete().eq('id', id);
+    if (window.m7Toast) m7Toast('🗑️ Pedido eliminado', '#ff003c');
+    loadOrders();
+  }
+
+  document.getElementById('statusFilter').addEventListener('change', loadOrders);
+  loadOrders();
+</script>
+</body>
+</html>

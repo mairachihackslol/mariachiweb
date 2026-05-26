@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARIACHI HACKS | Completar Pedido</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+  <script src="js/supabase.js"></script>
+  <script src="js/neon-effects.js"></script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(8,8,14,0.8); border: 1px solid rgba(0,255,102,0.13); backdrop-filter: blur(14px); }
+    .btn-primary { background: linear-gradient(135deg,#00ff66,#00bc4c); color:#000; font-weight:800; transition:all .25s; }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg,#00ff66,#ff003c); color:#fff; transform:translateY(-1px); box-shadow:0 0 28px rgba(0,255,102,0.4); }
+    .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
+    input { background: rgba(8,8,14,0.9) !important; border: 1px solid rgba(0,255,102,0.15) !important; color:#f1f5f9 !important; transition: border-color .2s, box-shadow .2s; }
+    input:focus { border-color: rgba(0,255,102,0.5) !important; box-shadow: 0 0 0 3px rgba(0,255,102,0.08) !important; outline:none; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .animate-in { animation: fadeIn 0.4s ease both; }
+    @keyframes checkPop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+    .check-anim { animation: checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+  </style>
+</head>
+<body class="p-4 min-h-screen flex items-center justify-center">
+
+<div class="w-full max-w-md animate-in">
+
+  <!-- Success screen (hidden) -->
+  <div id="successScreen" class="glass-card p-10 rounded-3xl text-center hidden">
+    <div class="w-20 h-20 mx-auto rounded-full bg-emerald-950/60 border border-emerald-900/50 flex items-center justify-center mb-5 check-anim">
+      <span class="material-symbols-outlined text-4xl text-emerald-400">check_circle</span>
+    </div>
+    <h2 class="text-2xl font-black text-white mb-2" style="font-family:'Syne',sans-serif">¡Orden Enviada!</h2>
+    <p class="text-zinc-400 text-sm mb-6">Tu pedido ha sido registrado. Te contactaremos pronto.</p>
+    <div class="flex flex-col gap-3">
+      <button onclick="location.href='mis-pedidos.html'" class="btn-primary w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest">Ver Mis Pedidos</button>
+      <button onclick="location.href='index.html'" class="text-xs text-zinc-500 hover:text-zinc-300 transition py-2">Seguir comprando</button>
+    </div>
+  </div>
+
+  <!-- Checkout form -->
+  <div id="checkoutCard" class="glass-card p-7 rounded-3xl">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-950/60 border border-emerald-900/50 flex items-center justify-center mb-4">
+        <span class="material-symbols-outlined text-3xl text-emerald-400">shopping_bag</span>
+      </div>
+      <h1 class="text-xl font-black text-white" style="font-family:'Syne',sans-serif">COMPLETAR PEDIDO</h1>
+      <p class="text-zinc-500 text-xs mt-1">Ingresa tus datos para confirmar la orden</p>
+    </div>
+
+    <!-- Order summary mini -->
+    <div id="orderSummary" class="bg-zinc-950/50 border border-zinc-800 rounded-xl p-4 mb-5">
+      <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-2">Resumen del pedido</p>
+      <div id="summaryItems" class="space-y-1 text-xs text-zinc-400 mb-3 max-h-28 overflow-y-auto"></div>
+      <div class="border-t border-zinc-800 pt-2 flex justify-between font-bold text-white">
+        <span class="text-xs">Total a Pagar:</span>
+        <span id="orderTotal" class="text-emerald-400 font-mono" style="font-family:'Syne',sans-serif">$0.00</span>
+      </div>
+    </div>
+
+    <form id="checkoutForm" class="flex flex-col gap-4">
+      <div>
+        <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1.5">Nombre de Usuario</label>
+        <input type="text" id="clientName" required placeholder="Tu nombre o alias"
+          class="w-full rounded-xl px-4 py-3 text-sm">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase tracking-widest text-zinc-400 font-bold mb-1.5">Contacto <span class="text-zinc-600 normal-case tracking-normal">(WhatsApp / Telegram)</span></label>
+        <input type="text" id="clientPhone" required placeholder="@usuario o +52..."
+          class="w-full rounded-xl px-4 py-3 text-sm">
+      </div>
+
+      <div id="errorMsg" class="text-xs text-red-400 bg-red-950/30 border border-red-900/40 p-3 rounded-xl hidden text-center"></div>
+
+      <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 mt-1">
+        <span class="material-symbols-outlined text-sm">send</span> Confirmar Orden
+      </button>
+    </form>
+
+    <button onclick="location.href='compra.html'" class="w-full text-center text-xs text-zinc-600 hover:text-zinc-400 transition mt-4 flex items-center justify-center gap-1">
+      <span class="material-symbols-outlined text-xs">arrow_back</span> Volver al carrito
+    </button>
+  </div>
+</div>
+
+<script>
+  const cart = JSON.parse(localStorage.getItem('m7_cart')) || [];
+  if (!cart.length) location.href = 'index.html';
+
+  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  document.getElementById('orderTotal').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('summaryItems').innerHTML = cart.map(i =>
+    `<div class="flex justify-between"><span class="truncate pr-2">${i.name} ×${i.quantity}</span><span class="font-mono text-zinc-300 shrink-0">$${(i.price*i.quantity).toFixed(2)}</span></div>`
+  ).join('');
+
+  document.getElementById('checkoutForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const errDiv = document.getElementById('errorMsg');
+    const name = document.getElementById('clientName').value.trim();
+    const phone = document.getElementById('clientPhone').value.trim();
+
+    errDiv.classList.add('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">progress_activity</span> Procesando...';
+
+    const { error } = await window.m7Supabase.from('orders').insert([{
+      client_name: name,
+      client_contact: phone,
+      products_list: cart.map(i => ({ id:i.id, name:i.name, price:i.price, quantity:i.quantity, category:i.category })),
+      total_price: total,
+      status: 'Pendiente'
+    }]);
+
+    if (error) {
+      errDiv.textContent = '❌ Error al enviar: ' + error.message;
+      errDiv.classList.remove('hidden');
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-symbols-outlined text-sm">send</span> Confirmar Orden';
+      return;
+    }
+
+    localStorage.removeItem('m7_cart');
+    document.getElementById('checkoutCard').classList.add('hidden');
+    const success = document.getElementById('successScreen');
+    success.classList.remove('hidden');
+    success.querySelector('.check-anim').style.animation = 'none';
+    setTimeout(() => { success.querySelector('.check-anim').style.animation = ''; }, 10);
+  });
+</script>
+</body>
+</html>

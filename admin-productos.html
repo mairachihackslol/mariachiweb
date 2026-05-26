@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARIACHI PANEL | Inventario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+    <script src="js/supabase.js"></script>
+    <script src="js/neon-effects.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        .glass-card {
+            background: rgba(10, 11, 24, 0.45);
+            border: 1px solid rgba(0, 255, 102, 0.12);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 bg-[#030306] text-slate-100">
+
+<div class="max-w-6xl mx-auto">
+    <header class="flex justify-between items-center glass-card p-4 rounded-2xl mb-6">
+        <button onclick="location.href='dashboard.html'" class="text-xs font-bold text-zinc-400 hover:text-white flex items-center gap-1 transition">
+            <span class="material-symbols-outlined text-sm">arrow_back</span> Volver Central
+        </button>
+        <button onclick="openModal()" class="bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-sm">add</span> Nuevo Producto
+        </button>
+    </header>
+
+    <div class="glass-card rounded-2xl overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-zinc-950/80 text-zinc-400 text-[11px] uppercase tracking-widest border-b border-zinc-900">
+                    <th class="p-4">ID</th>
+                    <th class="p-4">Producto / Planes</th>
+                    <th class="p-4">Precio base</th>
+                    <th class="p-4">Destacado</th>
+                    <th class="p-4 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="productsTable" class="divide-y divide-zinc-900/40">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="productModal" class="modal fixed inset-0 bg-black/80 backdrop-blur-sm z-50 items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-card w-full max-w-md p-6 rounded-3xl relative bg-[#070814] my-8">
+        <h2 id="modalTitle" class="text-lg font-black text-white uppercase tracking-wider mb-4">Agregar Producto</h2>
+        
+        <form id="productForm" class="flex flex-col gap-4">
+            <input type="hidden" id="productId">
+            
+            <div>
+                <label class="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-1">Nombre del Software</label>
+                <input type="text" id="prodName" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-1">Precio Base ($)</label>
+                    <input type="number" step="0.01" id="prodPrice" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500" placeholder="Ej: 5.00">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-1">Categoría</label>
+                    <input type="text" id="prodCategory" placeholder="Bypass / Script / Regedit" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-1">URL de la Foto</label>
+                <input type="url" id="prodImage" placeholder="https://enlace-de-tu-foto.png" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+            </div>
+            
+            <div>
+                <label class="block text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-1">Descripción corta</label>
+                <textarea id="prodDesc" rows="2" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"></textarea>
+            </div>
+
+            <div class="border-t border-zinc-900 pt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-[10px] uppercase text-emerald-400 font-bold tracking-widest">Planes de Suscripción (Opcional)</label>
+                    <button type="button" onclick="addPlanRow()" class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-900 px-2 py-1 rounded-lg hover:bg-emerald-900/40 font-bold uppercase transition flex items-center gap-0.5">
+                        <span class="material-symbols-outlined text-[12px]">add</span> Añadir Plan
+                    </button>
+                </div>
+                <p class="text-[10px] text-zinc-500 mb-2">Si agregas planes aquí, se mostrarán como opciones en el catálogo (ej: 1 Día, 7 Días).</p>
+                
+                <div id="plansContainer" class="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                    </div>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer py-1 border-t border-zinc-900 pt-3">
+                <input type="checkbox" id="prodHot" class="accent-emerald-500 w-4 h-4">
+                <span class="text-xs font-bold text-zinc-400 uppercase tracking-wide">Marcar como producto "HOT" 🔥</span>
+            </label>
+
+            <div class="flex gap-2 mt-2">
+                <button type="button" onclick="closeModal()" class="w-1/2 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition">Cancelar</button>
+                <button type="submit" class="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition">Guardar Herramienta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    window.m7Supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) location.href = 'login.html';
+    });
+
+    async function loadProducts() {
+        const { data, error } = await window.m7Supabase.from('products').select('*');
+        if (error) return console.error(error);
+
+        const tbody = document.getElementById('productsTable');
+        tbody.innerHTML = data.map(p => {
+            const hasPlans = p.plans && Array.isArray(p.plans) && p.plans.length > 0;
+            // Genera badges pequeños de los planes si existen
+            const plansBadges = hasPlans 
+                ? `<div class="flex flex-wrap gap-1 mt-1">${p.plans.map(pl => `<span class="text-[9px] bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-zinc-400 font-mono">${pl.name}: $${pl.price}</span>`).join('')}</div>`
+                : '<span class="text-[9px] text-zinc-600 block mt-0.5">Sin sub-planes definidos</span>';
+
+            return `
+                <tr class="border-b border-zinc-900/60 hover:bg-zinc-950/40 transition">
+                    <td class="p-4 text-xs font-mono text-zinc-500">#${p.id}</td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${p.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=80'}" alt="" class="w-9 h-9 rounded-xl object-cover border border-zinc-800">
+                            <div>
+                                <span class="font-bold text-white block">${p.name}</span>
+                                ${plansBadges}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4 text-sm font-bold font-mono text-emerald-400">$${p.price}</td>
+                    <td class="p-4"><span class="text-xs ${p.hot ? 'text-amber-400 font-bold' : 'text-zinc-600'}">${p.hot ? '🔥 Activo' : 'No'}</span></td>
+                    <td class="p-4 text-right flex justify-end gap-2">
+                        <button onclick='editProduct(${JSON.stringify(p).replace(/'/g, "&apos;")})' class="p-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-xl transition flex items-center"><span class="material-symbols-outlined text-sm">edit</span></button>
+                        <button onclick="deleteProduct(${p.id})" class="p-2 bg-red-950/40 hover:bg-red-900/60 text-red-400 rounded-xl transition flex items-center border border-red-900/30"><span class="material-symbols-outlined text-sm">delete</span></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Funciones para manipular las filas de planes dinámicamente
+    function addPlanRow(name = '', price = '') {
+        const container = document.getElementById('plansContainer');
+        const div = document.createElement('div');
+        div.className = "plan-row flex gap-2 items-center bg-zinc-950 p-2 rounded-xl border border-zinc-900";
+        div.innerHTML = `
+            <input type="text" placeholder="Ej: 1 Día" value="${name}" required class="plan-name w-1/2 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none">
+            <input type="number" step="0.01" placeholder="Precio" value="${price}" required class="plan-price w-5/12 bg-zinc-900 border border-zinc-800 rounded-lg px-2 py-1 text-xs text-white focus:outline-none font-mono">
+            <button type="button" onclick="this.parentElement.remove()" class="w-1/12 text-red-400 hover:text-red-500 transition flex items-center justify-center">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+        `;
+        container.appendChild(div);
+    }
+
+    function getPlansData() {
+        const rows = document.querySelectorAll('.plan-row');
+        const plans = [];
+        rows.forEach(row => {
+            const name = row.querySelector('.plan-name').value.trim();
+            const price = parseFloat(row.querySelector('.plan-price').value);
+            if (name && !isNaN(price)) {
+                plans.push({ name, price });
+            }
+        });
+        return plans.length > 0 ? plans : null;
+    }
+
+    function openModal() {
+        document.getElementById('productForm').reset();
+        document.getElementById('productId').value = '';
+        document.getElementById('plansContainer').innerHTML = ''; // Limpiar planes anteriores
+        document.getElementById('modalTitle').textContent = 'Agregar Producto';
+        document.getElementById('productModal').classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('productModal').classList.remove('active'); }
+
+    function editProduct(p) {
+        openModal();
+        document.getElementById('modalTitle').textContent = 'Editar Producto';
+        document.getElementById('productId').value = p.id;
+        document.getElementById('prodName').value = p.name;
+        document.getElementById('prodPrice').value = p.price;
+        document.getElementById('prodCategory').value = p.category || '';
+        document.getElementById('prodDesc').value = p.description || '';
+        document.getElementById('prodImage').value = p.image || '';
+        document.getElementById('prodHot').checked = !!p.hot;
+
+        // Cargar los planes si tiene guardados en JSON
+        if (p.plans && Array.isArray(p.plans)) {
+            p.plans.forEach(plan => addPlanRow(plan.name, plan.price));
+        }
+    }
+
+    async function deleteProduct(id) {
+        if(!confirm('¿Eliminar esta herramienta?')) return;
+        await window.m7Supabase.from('products').delete().eq('id', id);
+        loadProducts();
+    }
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('productId').value;
+        
+        const pData = {
+            name: document.getElementById('prodName').value,
+            price: parseFloat(document.getElementById('prodPrice').value),
+            category: document.getElementById('prodCategory').value || 'Software',
+            description: document.getElementById('prodDesc').value,
+            image: document.getElementById('prodImage').value,
+            hot: document.getElementById('prodHot').checked,
+            plans: getPlansData(), // Obtiene el arreglo JSON estructurado
+            stock: 99999
+        };
+
+        if(id) await window.m7Supabase.from('products').update(pData).eq('id', id);
+        else await window.m7Supabase.from('products').insert([pData]);
+        
+        closeModal();
+        loadProducts();
+    });
+
+    loadProducts();
+</script>
+</body>
+</html>

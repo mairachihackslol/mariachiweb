@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARIACHI HACKS | Mi Carrito</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+  <script src="js/neon-effects.js"></script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .glass-card { background: rgba(8,8,14,0.75); border: 1px solid rgba(0,255,102,0.12); backdrop-filter: blur(14px); }
+    .btn-primary { background: linear-gradient(135deg,#00ff66,#00bc4c); color:#000; font-weight:800; transition:all .25s; }
+    .btn-primary:hover { background: linear-gradient(135deg,#00ff66,#ff003c); color:#fff; transform:translateY(-1px); box-shadow:0 0 25px rgba(0,255,102,0.4); }
+    .item-card { transition: all 0.2s ease; }
+    .item-card:hover { border-color: rgba(0,255,102,0.25) !important; }
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .animate-in { animation: fadeInUp 0.35s ease both; }
+    .qty-btn { background: rgba(0,255,102,0.08); border: 1px solid rgba(0,255,102,0.2); color: #00ff66; width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; font-weight:bold; font-size:14px; }
+    .qty-btn:hover { background: rgba(0,255,102,0.18); }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+<div class="max-w-4xl mx-auto">
+  <!-- Header -->
+  <header class="mb-6 flex items-center justify-between glass-card p-4 rounded-2xl animate-in">
+    <button onclick="location.href='index.html'" class="flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-emerald-400 transition">
+      <span class="material-symbols-outlined text-sm">arrow_back</span> Seguir comprando
+    </button>
+    <h1 class="text-sm font-black text-white uppercase tracking-widest" style="font-family:'Syne',sans-serif">Mi Carrito</h1>
+    <button onclick="clearCart()" class="text-xs text-zinc-600 hover:text-red-400 transition flex items-center gap-1">
+      <span class="material-symbols-outlined text-sm">delete_sweep</span>
+      <span class="hidden sm:inline">Vaciar</span>
+    </button>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <!-- Items -->
+    <div id="cartItems" class="md:col-span-2 flex flex-col gap-3"></div>
+
+    <!-- Summary -->
+    <div class="glass-card p-6 rounded-2xl h-fit animate-in" style="animation-delay:.1s">
+      <h2 class="text-sm font-black text-white mb-5 uppercase tracking-widest" style="font-family:'Syne',sans-serif">Resumen</h2>
+      <div class="space-y-2 text-xs text-zinc-400 mb-4">
+        <div class="flex justify-between"><span>Subtotal</span><span id="subtotal" class="font-mono">$0.00</span></div>
+        <div class="flex justify-between"><span>Descuento</span><span class="text-emerald-400 font-mono">$0.00</span></div>
+      </div>
+      <div class="border-t border-zinc-800 pt-4 mb-5">
+        <div class="flex justify-between font-bold text-white">
+          <span class="text-sm">Total</span>
+          <span id="total" class="text-emerald-400 font-mono text-lg" style="font-family:'Syne',sans-serif">$0.00</span>
+        </div>
+      </div>
+      <button id="checkoutBtn" class="btn-primary w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined text-sm">lock</span> Proceder al Pago
+      </button>
+      <p class="text-center text-[10px] text-zinc-600 mt-3">Pago seguro vía WhatsApp / Telegram</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  let cart = JSON.parse(localStorage.getItem('m7_cart')) || [];
+
+  function save() { localStorage.setItem('m7_cart', JSON.stringify(cart)); }
+
+  function changeQty(index, delta) {
+    cart[index].quantity += delta;
+    if (cart[index].quantity <= 0) cart.splice(index, 1);
+    save(); renderCart();
+  }
+
+  function removeItem(index) {
+    cart.splice(index, 1);
+    save(); renderCart();
+  }
+
+  function clearCart() {
+    if (!cart.length) return;
+    if (!confirm('¿Vaciar el carrito?')) return;
+    cart = []; save(); renderCart();
+  }
+
+  function renderCart() {
+    const container = document.getElementById('cartItems');
+    if (!cart.length) {
+      container.innerHTML = `
+        <div class="glass-card p-10 rounded-2xl text-center animate-in">
+          <span class="material-symbols-outlined text-5xl text-zinc-700 mb-3 block">shopping_cart</span>
+          <p class="text-zinc-400 text-sm font-semibold mb-4">El carrito está vacío</p>
+          <button onclick="location.href='index.html'" class="btn-primary px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider">Ver Productos</button>
+        </div>`;
+      document.getElementById('subtotal').textContent = '$0.00';
+      document.getElementById('total').textContent = '$0.00';
+      return;
+    }
+
+    let subtotal = 0;
+    container.innerHTML = cart.map((item, i) => {
+      subtotal += item.price * item.quantity;
+      return `
+        <div class="glass-card item-card p-4 rounded-xl flex justify-between items-center animate-in" style="animation-delay:${i*0.06}s">
+          <div class="flex-1 min-w-0 pr-4">
+            <span class="text-[9px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-900/60 font-bold uppercase tracking-wider">${item.category || 'Licencia'}</span>
+            <h3 class="font-bold text-white text-sm mt-1 truncate" title="${item.name}">${item.name}</h3>
+            <p class="text-emerald-400 font-mono text-sm font-bold mt-0.5">$${(item.price * item.quantity).toFixed(2)}</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+              <button class="qty-btn" onclick="changeQty(${i}, -1)">−</button>
+              <span class="text-white text-sm font-bold w-6 text-center">${item.quantity}</span>
+              <button class="qty-btn" onclick="changeQty(${i}, 1)">+</button>
+            </div>
+            <button onclick="removeItem(${i})" class="text-zinc-600 hover:text-red-400 transition">
+              <span class="material-symbols-outlined text-lg">delete</span>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+    document.getElementById('total').textContent = `$${subtotal.toFixed(2)}`;
+  }
+
+  document.getElementById('checkoutBtn').addEventListener('click', () => {
+    if (cart.length > 0) location.href = 'checkout.html';
+    else if (window.m7Toast) m7Toast('El carrito está vacío', '#ff003c');
+  });
+
+  renderCart();
+</script>
+</body>
+</html>
